@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaHeart } from 'react-icons/fa'
+import { FaHeart, FaChevronLeft, FaChevronRight, FaStepForward } from 'react-icons/fa'
 import PhaseOneEnding from './PhaseOneEnding'
 import PhaseThree, { PHASE_THREE_DIALOGUES } from './PhaseThree'
 import PhaseFour, { PHASE_FOUR_DIALOGUES } from './PhaseFour'
 
 const DIALOGUES = [
-  'Hiii Alagee… ',
+  'Hiii Alagee…',
   'Unakaga dhaan idha create panninen…',
   'Pidikum nu nambren…',
   'I want to tell you a story.',
@@ -139,6 +139,7 @@ const Background = () => {
   const [phaseFourDialogueIndex, setPhaseFourDialogueIndex] = useState(() =>
     clampNumber(saved?.phaseFourDialogueIndex, 0, PHASE_FOUR_DIALOGUES.length - 1, 0),
   )
+  const [showInstructions, setShowInstructions] = useState(true)
   const rainCanvasRef = useRef(null)
   const rainAudioRef = useRef(null)
   const thunderAudioRef = useRef(null)
@@ -588,6 +589,61 @@ const Background = () => {
       <div className="love-hearts" />
       <div className="love-haze" />
       <div className="love-vignette" />
+
+      <AnimatePresence>
+        {showInstructions && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-md"
+            >
+              <div className="absolute -top-20 -left-20 h-40 w-40 rounded-full bg-rose-500/30 blur-3xl" />
+              <div className="absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-purple-500/30 blur-3xl" />
+
+              <h2 className="mb-8 text-center text-3xl font-bold text-white drop-shadow-md" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                How to Watch 💖
+              </h2>
+
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="flex flex-col items-center justify-center rounded-2xl bg-white/5 p-4 border border-white/10">
+                  <FaChevronLeft className="text-3xl text-rose-300 mb-2" />
+                  <span className="text-sm font-medium text-rose-100">Tap Left</span>
+                  <span className="text-xs text-white/50">Go Back</span>
+                </div>
+                <div className="flex flex-col items-center justify-center rounded-2xl bg-white/5 p-4 border border-white/10">
+                  <FaChevronRight className="text-3xl text-rose-300 mb-2" />
+                  <span className="text-sm font-medium text-rose-100">Tap Right</span>
+                  <span className="text-xs text-white/50">Continue</span>
+                </div>
+              </div>
+
+              <div className="mb-8 rounded-2xl bg-white/5 p-4 border border-white/10 flex items-center gap-4">
+                <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-white/10">
+                  <FaStepForward className="text-lg text-rose-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-rose-100">Feel Boring?</p>
+                  <p className="text-xs text-white/50">Click "Next Phase" at top right to skip.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInstructions(false)}
+                className="w-full rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 py-3.5 text-lg font-bold text-white shadow-lg transition-transform active:scale-95 hover:shadow-rose-500/25"
+              >
+                Start Journey ✨
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <section className="relative z-10 min-h-screen overflow-hidden" onPointerDown={handleScreenTap}>
         {!showPhaseOneEnding && !showPhaseThree && !showPhaseFour ? (
