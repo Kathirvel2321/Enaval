@@ -100,8 +100,20 @@ const PhaseThree = ({ dialogueIndex, onNextPhase }) => {
           initial={{ opacity: 0, y: 14, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-white/80 bg-white/78 px-4 py-3 shadow-[0_14px_26px_rgba(20,44,68,0.18)] backdrop-blur-xl sm:px-6 sm:py-5"
+          className="relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-cyan-100/75 bg-[linear-gradient(130deg,rgba(255,255,255,0.88),rgba(236,249,255,0.84),rgba(234,255,251,0.82))] px-4 py-3 shadow-[0_16px_30px_rgba(20,44,68,0.22)] ring-1 ring-cyan-200/45 backdrop-blur-xl sm:px-6 sm:py-5"
         >
+          <motion.div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
+            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+            transition={{ duration: 7.2, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              backgroundImage:
+                'linear-gradient(120deg, rgba(255,255,255,0) 22%, rgba(255,255,255,0.48) 43%, rgba(255,255,255,0) 62%)',
+              backgroundSize: '220% 220%',
+              opacity: 0.35,
+            }}
+          />
           <AnimatePresence mode="wait">
             <motion.p
               key={dialogueIndex}

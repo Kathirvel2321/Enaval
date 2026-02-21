@@ -728,49 +728,54 @@ const Background = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[radial-gradient(85%_70%_at_50%_20%,rgba(68,34,40,0.58),rgba(8,5,10,0.96))] p-4 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.88, opacity: 0, y: 28 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-md"
+              exit={{ scale: 0.9, opacity: 0, y: 22 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full max-w-[430px] overflow-hidden rounded-[2rem] border border-amber-200/35 bg-[linear-gradient(160deg,rgba(35,20,24,0.88),rgba(14,10,15,0.92))] p-8 shadow-[0_22px_70px_rgba(0,0,0,0.52)]"
             >
-              <div className="absolute -top-20 -left-20 h-40 w-40 rounded-full bg-rose-500/30 blur-3xl" />
-              <div className="absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-purple-500/30 blur-3xl" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_55%_at_50%_0%,rgba(255,220,162,0.18),rgba(255,220,162,0)_72%)]" />
+              <div className="pointer-events-none absolute inset-0 border border-white/5 [mask-image:linear-gradient(to_bottom,white,transparent_80%)]" />
+              <div className="pointer-events-none absolute right-6 top-5 text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-200/70">
+                Private Premiere
+              </div>
 
-              <h2 className="mb-8 text-center text-3xl font-bold text-white drop-shadow-md" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                How to Watch 💖
+              <h2 className="mb-2 text-center text-4xl font-semibold text-amber-100 drop-shadow-[0_0_18px_rgba(255,210,158,0.24)]" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                How To Watch
               </h2>
+              <p className="mb-7 text-center text-xs uppercase tracking-[0.25em] text-amber-100/60">Tap-based Story Experience</p>
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="flex flex-col items-center justify-center rounded-2xl bg-white/5 p-4 border border-white/10">
-                  <FaChevronLeft className="text-3xl text-rose-300 mb-2" />
-                  <span className="text-sm font-medium text-rose-100">Tap Left</span>
-                  <span className="text-xs text-white/50">Go Back</span>
+              <div className="mb-7 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-amber-100/15 bg-white/[0.04] p-4">
+                  <FaChevronLeft className="mb-2 text-2xl text-amber-200/90" />
+                  <p className="text-sm font-semibold text-amber-100">Tap Left</p>
+                  <p className="text-xs text-amber-100/65">Replay previous moment</p>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-2xl bg-white/5 p-4 border border-white/10">
-                  <FaChevronRight className="text-3xl text-rose-300 mb-2" />
-                  <span className="text-sm font-medium text-rose-100">Tap Right</span>
-                  <span className="text-xs text-white/50">Continue</span>
+                <div className="rounded-2xl border border-amber-100/15 bg-white/[0.04] p-4">
+                  <FaChevronRight className="mb-2 text-2xl text-amber-200/90" />
+                  <p className="text-sm font-semibold text-amber-100">Tap Right</p>
+                  <p className="text-xs text-amber-100/65">Move to next dialogue</p>
                 </div>
               </div>
 
-              <div className="mb-8 rounded-2xl bg-white/5 p-4 border border-white/10 flex items-center gap-4">
-                <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full bg-white/10">
-                  <FaStepForward className="text-lg text-rose-300" />
+              <div className="mb-8 flex items-center gap-3 rounded-2xl border border-amber-100/15 bg-white/[0.04] p-4">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100/10">
+                  <FaStepForward className="text-sm text-amber-200" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-rose-100">Feel Boring?</p>
-                  <p className="text-xs text-white/50">Click "Next Phase" at top right to skip.</p>
+                  <p className="text-sm font-semibold text-amber-100">Fast Skip</p>
+                  <p className="text-xs text-amber-100/65">Use "Next Phase" on top-right anytime.</p>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowInstructions(false)}
-                className="w-full rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 py-3.5 text-lg font-bold text-white shadow-lg transition-transform active:scale-95 hover:shadow-rose-500/25"
+                className="w-full rounded-xl bg-[linear-gradient(95deg,#f3c681,#e79d69)] py-3.5 text-base font-bold tracking-wide text-[#2a1a14] shadow-[0_12px_32px_rgba(213,132,76,0.34)] transition-transform active:scale-95"
               >
-                Start Journey ✨
+                Enter Story
               </button>
             </motion.div>
           </motion.div>
@@ -813,16 +818,16 @@ const Background = () => {
                   y: { delay: 0.95, duration: 5.2, repeat: Infinity, ease: 'easeInOut' },
                   boxShadow: { delay: 0.95, duration: 5.2, repeat: Infinity, ease: 'easeInOut' },
                 }}
-                className="absolute left-1/2 top-4 z-20 w-[min(92vw,430px)] -translate-x-1/2 overflow-hidden rounded-[1.75rem] border border-white/90 bg-gradient-to-br from-white/88 via-rose-50/78 to-white/78 px-5 py-4 text-rose-700 backdrop-blur-xl md:left-auto md:right-[8%] md:top-[14%] md:translate-x-0 md:px-6 md:py-5"
+                className="absolute left-1/2 top-4 z-20 w-[min(92vw,430px)] -translate-x-1/2 overflow-hidden rounded-[1.85rem] border border-pink-100/85 bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(255,243,250,0.9),rgba(255,235,247,0.88))] px-5 py-4 text-rose-700 shadow-[0_20px_34px_rgba(118,34,85,0.2)] ring-1 ring-pink-200/55 backdrop-blur-xl md:left-auto md:right-[8%] md:top-[14%] md:translate-x-0 md:px-6 md:py-5"
               >
                 <motion.div
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-75"
+                  className="pointer-events-none absolute inset-0 opacity-85"
                   animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                   transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
                     backgroundImage:
-                      'linear-gradient(115deg, rgba(255,255,255,0) 18%, rgba(255,255,255,0.6) 36%, rgba(255,255,255,0) 56%)',
+                      'linear-gradient(115deg, rgba(255,255,255,0) 18%, rgba(255,255,255,0.72) 38%, rgba(255,255,255,0) 60%)',
                     backgroundSize: '200% 200%',
                   }}
                 />
@@ -831,7 +836,7 @@ const Background = () => {
 
                 <motion.span
                   aria-hidden
-                  className="pointer-events-none absolute -right-2 top-2 text-base text-rose-300/70"
+                  className="pointer-events-none absolute -right-2 top-2 text-base text-pink-300/80"
                   animate={{ y: [0, -8, 0], rotate: [0, 8, 0] }}
                   transition={{ duration: 4.6, repeat: Infinity, ease: 'easeInOut' }}
                 >
@@ -839,7 +844,7 @@ const Background = () => {
                 </motion.span>
                 <motion.span
                   aria-hidden
-                  className="pointer-events-none absolute -left-1 bottom-2 text-sm text-rose-300/65"
+                  className="pointer-events-none absolute -left-1 bottom-2 text-sm text-pink-300/75"
                   animate={{ y: [0, -6, 0], rotate: [0, -10, 0] }}
                   transition={{ duration: 5.1, repeat: Infinity, ease: 'easeInOut' }}
                 >
@@ -872,7 +877,7 @@ const Background = () => {
                       animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                       exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
                       transition={{ duration: 0.42, ease: 'easeOut' }}
-                      className="bg-gradient-to-r from-rose-700 via-fuchsia-600 to-rose-500 bg-clip-text text-[1.92rem] font-semibold leading-[1.08] text-transparent drop-shadow-[0_3px_8px_rgba(185,74,130,0.35)] sm:text-[2.35rem]"
+                      className="bg-gradient-to-r from-[#ca5f94] via-[#ca4b8f] to-[#ff0088] bg-clip-text text-[1.92rem] font-semibold leading-[1.08] text-transparent drop-shadow-[0_4px_10px_rgba(176,72,126,0.32)] sm:text-[2.35rem]"
                       style={{ fontFamily: "'Cormorant Garamond', serif" }}
                     >
                       {DIALOGUES[dialogueIndex]}
@@ -885,7 +890,7 @@ const Background = () => {
                     <span
                       key={index}
                       className={`h-1.5 rounded-full transition-all ${
-                        index === dialogueIndex ? 'w-7 bg-rose-500/75' : 'w-3 bg-rose-200/85'
+                        index === dialogueIndex ? 'w-7 bg-pink-500/80' : 'w-3 bg-pink-200/90'
                       }`}
                     />
                   ))}
@@ -1098,7 +1103,7 @@ const Background = () => {
                         animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                         exit={{ opacity: 0, y: -8, filter: 'blur(5px)' }}
                         transition={{ duration: 0.45, ease: 'easeOut' }}
-                        className="bg-gradient-to-r from-[#6f1043] via-[#b52f78] to-[#6f1043] bg-clip-text text-[1.02rem] font-semibold leading-[1.28] text-transparent drop-shadow-[0_2px_8px_rgba(182,82,130,0.3)] sm:text-[1.95rem] lg:text-[1.5rem] lg:leading-[1.18]"
+                        className="bg-gradient-to-r from-[#c44388] via-[#c55191] to-[#ce257f] bg-clip-text text-[1.02rem] font-semibold leading-[1.28] text-transparent drop-shadow-[0_2px_8px_rgba(182,82,130,0.3)] sm:text-[1.95rem] lg:text-[1.5rem] lg:leading-[1.18]"
                         style={{ fontFamily: "'Cormorant Garamond', serif" }}
                       >
                         {REVEAL_DIALOGUES[revealDialogueIndex]}
@@ -1201,3 +1206,5 @@ const Background = () => {
 }
 
 export default Background
+
+

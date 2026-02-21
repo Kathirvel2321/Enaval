@@ -13,6 +13,7 @@ const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || ''
 const SUPABASE_URL = process.env.SUPABASE_URL || ''
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const SUPABASE_TABLE = process.env.SUPABASE_TABLE || 'story_visits'
+const SUPABASE_LOVE_SESSIONS_TABLE = process.env.SUPABASE_LOVE_SESSIONS_TABLE || 'love_sessions'
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY || ''
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_FROM || ''
@@ -344,6 +345,41 @@ app.post('/api/view/close', async (req, res) => {
     return res.json({ ok: true })
   } catch (error) {
     console.error('/api/view/close error:', error)
+    return res.status(500).json({ ok: false, error: 'internal_error' })
+  }
+})
+
+app.post('/api/love-session', async (req, res) => {
+  try {
+    if (!requireSupabase(res)) return
+    const visitId = String(req.body?.visitId || '').trim()
+    if (!visitId) return res.status(400).json({ ok: false, error: 'visitId is required' })
+
+    await ensureVisitExists(visitId, req)
+    const answers = typeof req.body?.answers === 'object' && req.body?.answers ? req.body.answers : {}
+    const score = Number.isFinite(Number(req.body?.score)) ? Number(req.body.score) : 0
+    const finalMessage = String(req.body?.finalMessage || '').trim()
+
+    const { error } = await supabase.from(SUPABASE_LOVE_SESSIONS_TABLE).insert({
+      visit_id: visitId,
+      answers,
+      score,
+      final_message: finalMessage,
+    })
+    if (error) throw error
+
+    await appendEvent({
+      visitId,
+      eventType: 'romantic_session',
+      phase: 'phase6.1',
+      key: 'secret_garden_saved',
+      value: 'true',
+      extra: { score, finalMessageLength: finalMessage.length },
+    })
+
+    return res.json({ ok: true })
+  } catch (error) {
+    console.error('/api/love-session error:', error)
     return res.status(500).json({ ok: false, error: 'internal_error' })
   }
 })

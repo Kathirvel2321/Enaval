@@ -25,6 +25,8 @@ const getVisitId = () => {
   return created
 }
 
+export const getCurrentVisitId = () => getVisitId()
+
 const resetVisitId = () => {
   if (typeof window === 'undefined') return ''
   const created = createVisitId()
@@ -108,4 +110,15 @@ export const trackSiteClose = ({ phase = 'exit', completed = false } = {}) => {
     extra: { completed },
   })
   navigator.sendBeacon(`${API_BASE}/api/view/close`, new Blob([payload], { type: 'application/json' }))
+}
+
+export const saveLoveSession = async ({ visitId, answers, score, finalMessage }) => {
+  const id = String(visitId || getVisitId() || '').trim()
+  if (!id) return false
+  return post('/api/love-session', {
+    visitId: id,
+    answers: answers || {},
+    score: Number.isFinite(Number(score)) ? Number(score) : 0,
+    finalMessage: String(finalMessage || '').trim(),
+  })
 }

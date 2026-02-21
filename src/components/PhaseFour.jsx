@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { trackChoice, trackMemoryMessage } from '../lib/tracker'
+import SecretGardenPhase from './SecretGardenPhase'
+import PhaseSixTwoSunrise from './PhaseSixTwoSunrise'
 
 const PHASE_FOUR_DIALOGUES = ['interactive']
 const INTRO_TEXT = 'Nanga badminton velayandu pathathu illala nenga...\nIpade chudu...'
@@ -52,6 +54,15 @@ const PHASE_SIX_NO_DIALOGUES = [
   'Ne love pannanum ne katayum illa.',
   'Na unna love pannuven atheve pothum.',
 ]
+const PHASE_SIX_ONE_LETTER_LINES = [
+  'Idhu normal message illa... unakaga save pannina small love letter.',
+  'Nee vandha apram dhan en day complete nu feel aagudhu.',
+  'Un smile patha udane enaku calm, courage, and hope varudhu.',
+]
+const PHASE_SIX_ONE_PROMISES = [
+  { label: 'Always with you', reply: 'Idhu ketta udane en heart full ah smile pannuthu.' },
+  { label: 'Till forever', reply: 'Forever ah? Appo na luckiest person da.' },
+]
 const PHASE_SEVEN_DIALOGUES = [
   'Ne epovum why only me? nu kekkala.',
   'Athuke pathil epo solleren... kellu.',
@@ -63,6 +74,14 @@ const PHASE_SEVEN_DIALOGUES = [
   'Intha malli poo',
   'Intha teddy bear.',
   'Take this all.',
+]
+const PHASE_PRE_MEMORY_DIALOGUES = [
+  'Un kitta onnai onnu kekkava...',
+  'Innaila irundhu...',
+  'Namma rendu perum...',
+  'Ipdiye kelavan kelavi aagura varaikum...',
+  'Enkuda chella sandai potukede...',
+  'En kai pudichitu kooda ye irupaayaaa?',
 ]
 
 const easeInOut = (t) => 0.5 * (1 - Math.cos(Math.PI * t))
@@ -100,7 +119,15 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
   const [phaseSixQ1Open, setPhaseSixQ1Open] = useState(false)
   const [phaseSixQ2Open, setPhaseSixQ2Open] = useState(false)
   const [phaseSixNoUnlock, setPhaseSixNoUnlock] = useState(false)
+  const [phaseSixOneMode, setPhaseSixOneMode] = useState('intro')
+  const [phaseSixOneLetterIndex, setPhaseSixOneLetterIndex] = useState(0)
+  const [phaseSixOneEnvelopeOpen, setPhaseSixOneEnvelopeOpen] = useState(false)
+  const [phaseSixOnePromise, setPhaseSixOnePromise] = useState('')
+  const [phaseSixOneFromMode, setPhaseSixOneFromMode] = useState('yes')
   const [phaseSevenIndex, setPhaseSevenIndex] = useState(0)
+  const [phasePreMemoryIndex, setPhasePreMemoryIndex] = useState(0)
+  const [phasePreMemoryChoiceOpen, setPhasePreMemoryChoiceOpen] = useState(false)
+  const [phasePreMemoryDir, setPhasePreMemoryDir] = useState(1)
   const [phaseSixNoHopIndex, setPhaseSixNoHopIndex] = useState(0)
   const [mindVoiceActive, setMindVoiceActive] = useState(false)
   const [mindVoiceVanishing, setMindVoiceVanishing] = useState(false)
@@ -119,9 +146,12 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
   const sunriseAudioRef = useRef(null)
   const sunrisePlayedRef = useRef(false)
   const mindVoiceTimerRef = useRef(null)
+  const phaseSixOneTimerRef = useRef(null)
   const climaxIntervalRef = useRef(null)
   const climaxRevealTimerRef = useRef(null)
   const climaxTypeRef = useRef(null)
+  const preMemoryAudioRef = useRef(null)
+  const preMemoryPlayedRef = useRef(false)
 
   useEffect(() => {
     return () => {
@@ -133,9 +163,16 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
       if (mindVoiceTimerRef.current) {
         clearTimeout(mindVoiceTimerRef.current)
       }
+      if (phaseSixOneTimerRef.current) {
+        clearTimeout(phaseSixOneTimerRef.current)
+      }
       if (climaxIntervalRef.current) clearInterval(climaxIntervalRef.current)
       if (climaxRevealTimerRef.current) clearTimeout(climaxRevealTimerRef.current)
       if (climaxTypeRef.current) clearInterval(climaxTypeRef.current)
+      if (preMemoryAudioRef.current) {
+        preMemoryAudioRef.current.pause()
+        preMemoryAudioRef.current.currentTime = 0
+      }
     }
   }, [])
 
@@ -150,12 +187,12 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
 
   useEffect(() => {
     if (typeof onStageChange === 'function') {
-      const snapshot = `${stage}|p5:${phaseFiveIndex}|p6:${phaseSixMode}:${phaseSixIndex}|p7:${phaseSevenIndex}|submitted:${
+      const snapshot = `${stage}|p5:${phaseFiveIndex}|p6:${phaseSixMode}:${phaseSixIndex}|p61:${phaseSixOneMode}:${phaseSixOneLetterIndex}|p7:${phaseSevenIndex}|submitted:${
         endingSubmitted ? 1 : 0
       }|climax:${climaxReady ? 1 : 0}`
       onStageChange(snapshot)
     }
-  }, [climaxReady, endingSubmitted, onStageChange, phaseFiveIndex, phaseSevenIndex, phaseSixIndex, phaseSixMode, stage])
+  }, [climaxReady, endingSubmitted, onStageChange, phaseFiveIndex, phaseSevenIndex, phaseSixIndex, phaseSixMode, phaseSixOneLetterIndex, phaseSixOneMode, stage])
 
   const getPoints = () => {
     const w = window.innerWidth
@@ -451,7 +488,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
   }, [phaseFiveIndex, stage])
 
   useEffect(() => {
-    if (stage !== 'phase6' && stage !== 'phase7') return
+    if (stage !== 'phase6' && stage !== 'phase6.1' && stage !== 'phase6.2' && stage !== 'phase7' && stage !== 'phasePreMemory') return
     // Ensure final phase never stays under transition overlays.
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     setBlackOpacity(0)
@@ -459,7 +496,17 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
     setBusy(false)
   }, [stage])
 
+  const startPhaseSixTwo = () => {
+    setStage('phase6.2')
+    setDialogue('')
+    setSpeaker('boy')
+  }
+
   const startPhaseSeven = () => {
+    if (phaseSixOneTimerRef.current) {
+      clearTimeout(phaseSixOneTimerRef.current)
+      phaseSixOneTimerRef.current = null
+    }
     setStage('phase7')
     setPhaseSevenIndex(0)
     setMindVoiceActive(false)
@@ -469,7 +516,61 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
     setSpeaker('boy')
   }
 
+  const startPhasePreMemory = () => {
+    setStage('phasePreMemory')
+    setPhasePreMemoryIndex(0)
+    setPhasePreMemoryChoiceOpen(false)
+    setPhasePreMemoryDir(1)
+    preMemoryPlayedRef.current = false
+    setDialogue(PHASE_PRE_MEMORY_DIALOGUES[0])
+    setSpeaker('boy')
+  }
+
+  const startPhaseSixOne = (fromMode = 'yes') => {
+    if (phaseSixOneTimerRef.current) {
+      clearTimeout(phaseSixOneTimerRef.current)
+      phaseSixOneTimerRef.current = null
+    }
+    setStage('phase6.1')
+    setPhaseSixOneMode('intro')
+    setPhaseSixOneLetterIndex(0)
+    setPhaseSixOneEnvelopeOpen(false)
+    setPhaseSixOnePromise('')
+    setPhaseSixOneFromMode(fromMode)
+    setDialogue('Konjam special ah onnu ready panniruken... unakaga mattum.')
+    setSpeaker('boy')
+  }
+
+  const openPhaseSixOneEnvelope = () => {
+    if (busy || stage !== 'phase6.1' || phaseSixOneMode !== 'envelope') return
+    setPhaseSixOneEnvelopeOpen(true)
+    setPhaseSixOneMode('letter')
+    setPhaseSixOneLetterIndex(0)
+    setDialogue(PHASE_SIX_ONE_LETTER_LINES[0])
+    sendEvent({
+      phase: 'phase6.1',
+      question: 'Love Letter',
+      choice: 'Envelope Opened',
+    })
+  }
+
+  const selectPhaseSixOnePromise = (option) => {
+    if (busy || stage !== 'phase6.1' || phaseSixOneMode !== 'promise') return
+    setPhaseSixOnePromise(option.label)
+    setPhaseSixOneMode('result')
+    setDialogue(option.reply)
+    sendEvent({
+      phase: 'phase6.1',
+      question: 'Promise Choice',
+      choice: option.label,
+    })
+  }
+
   const startPhaseSix = () => {
+    if (phaseSixOneTimerRef.current) {
+      clearTimeout(phaseSixOneTimerRef.current)
+      phaseSixOneTimerRef.current = null
+    }
     setStage('phase6')
     setPhaseSixMode('intro')
     setPhaseSixIndex(0)
@@ -477,6 +578,10 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
     setPhaseSixQ2Open(false)
     setPhaseSixNoUnlock(false)
     setPhaseSixNoHopIndex(0)
+    setPhaseSixOneMode('intro')
+    setPhaseSixOneLetterIndex(0)
+    setPhaseSixOneEnvelopeOpen(false)
+    setPhaseSixOnePromise('')
     setDialogue(PHASE_SIX_DIALOGUES[0])
     setSpeaker('boy')
   }
@@ -549,6 +654,22 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
     if (!mindVoiceGone) setMindVoiceActive(true)
   }, [stage, phaseSevenIndex, mindVoiceGone])
 
+  useEffect(() => {
+    const audio = preMemoryAudioRef.current
+    if (!audio) return
+    if (stage !== 'phasePreMemory') {
+      audio.pause()
+      audio.currentTime = 0
+      return
+    }
+    if (preMemoryPlayedRef.current) return
+    preMemoryPlayedRef.current = true
+    audio.loop = false
+    audio.volume = 0.6
+    audio.currentTime = 0
+    audio.play().catch(() => {})
+  }, [stage])
+
   const NO_HOP_POSITIONS = [
     { top: '56%', left: '56%' },
     { top: '8%', left: '8%' },
@@ -566,13 +687,59 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         setPhaseSevenIndex(next)
         setDialogue(PHASE_SEVEN_DIALOGUES[next])
       } else {
-        startEndingNote()
+        startPhasePreMemory()
+      }
+      return
+    }
+
+    if (stage === 'phasePreMemory') {
+      if (phasePreMemoryChoiceOpen) return
+      if (phasePreMemoryIndex < PHASE_PRE_MEMORY_DIALOGUES.length - 1) {
+        const next = phasePreMemoryIndex + 1
+        setPhasePreMemoryDir(1)
+        setPhasePreMemoryIndex(next)
+        setDialogue(PHASE_PRE_MEMORY_DIALOGUES[next])
+        if (next === PHASE_PRE_MEMORY_DIALOGUES.length - 1) {
+          setPhasePreMemoryChoiceOpen(true)
+        }
+      }
+      return
+    }
+
+    if (stage === 'phase6.2') {
+      startPhaseSeven()
+      return
+    }
+
+    if (stage === 'phase6.1') {
+      if (phaseSixOneMode === 'intro') {
+        setPhaseSixOneMode('envelope')
+        setPhaseSixOneEnvelopeOpen(false)
+        setDialogue('Tap the letter... adhu la en manasu iruku.')
+        return
+      }
+      if (phaseSixOneMode === 'letter') {
+        if (phaseSixOneLetterIndex < PHASE_SIX_ONE_LETTER_LINES.length - 1) {
+          const next = phaseSixOneLetterIndex + 1
+          setPhaseSixOneLetterIndex(next)
+          setDialogue(PHASE_SIX_ONE_LETTER_LINES[next])
+        } else {
+          setPhaseSixOneMode('promise')
+          setDialogue('Ithu la onnu choose pannuva? Enaku idhu romba precious.')
+        }
+        return
+      }
+      if (phaseSixOneMode === 'promise') return
+      if (phaseSixOneMode === 'result') {
+        startPhaseSeven()
       }
       return
     }
 
     if (stage === 'endingNote') {
-      if (showClimax && climaxReady && onNextPhase) onNextPhase()
+      if (showClimax) return
+      if (endingSubmitted || isSending) return
+      if (climaxReady && onNextPhase) onNextPhase()
       else if (!endingInput.trim()) showEndingAlert('Hey cutiee, ethavuthu solanum thonichena anupe...')
       else showEndingAlert('Message send panni apram next ponga...')
       return
@@ -604,14 +771,14 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
           setPhaseSixIndex(next)
           setDialogue(PHASE_SIX_YES_DIALOGUES[next])
         } else {
-          startPhaseSeven()
+          startPhaseSixOne('yes')
         }
         return
       }
 
       if (phaseSixMode === 'no' || phaseSixMode === 'no_wait') {
         if (phaseSixMode === 'no_wait' && phaseSixNoUnlock) {
-          startPhaseSeven()
+          startPhaseSixOne('no')
         }
         return
       }
@@ -704,19 +871,93 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
   const onBack = () => {
     if (busy) return
 
+    if (stage === 'phase6.1') {
+      if (phaseSixOneMode === 'result') {
+        setPhaseSixOneMode('promise')
+        setDialogue('Ithu la onnu choose pannuva? Enaku idhu romba precious.')
+        return
+      }
+      if (phaseSixOneMode === 'promise') {
+        setPhaseSixOneMode('letter')
+        setPhaseSixOneLetterIndex(PHASE_SIX_ONE_LETTER_LINES.length - 1)
+        setDialogue(PHASE_SIX_ONE_LETTER_LINES[PHASE_SIX_ONE_LETTER_LINES.length - 1])
+        return
+      }
+      if (phaseSixOneMode === 'letter' && phaseSixOneLetterIndex > 0) {
+        const prev = phaseSixOneLetterIndex - 1
+        setPhaseSixOneLetterIndex(prev)
+        setDialogue(PHASE_SIX_ONE_LETTER_LINES[prev])
+        return
+      }
+      if (phaseSixOneMode === 'letter') {
+        setPhaseSixOneMode('envelope')
+        setPhaseSixOneEnvelopeOpen(false)
+        setDialogue('Tap the letter... adhu la en manasu iruku.')
+        return
+      }
+      if (phaseSixOneMode === 'envelope') {
+        setPhaseSixOneMode('intro')
+        setDialogue('Konjam special ah onnu ready panniruken... unakaga mattum.')
+        return
+      }
+      setStage('phase6')
+      setPhaseSixQ1Open(false)
+      if (phaseSixOneFromMode === 'no') {
+        setPhaseSixMode('no_wait')
+        setPhaseSixQ2Open(true)
+        setPhaseSixNoUnlock(true)
+        setPhaseSixIndex(PHASE_SIX_NO_DIALOGUES.length - 1)
+        setDialogue('Ipo No button click pannu.')
+      } else {
+        setPhaseSixMode('yes')
+        setPhaseSixQ2Open(false)
+        setPhaseSixIndex(PHASE_SIX_YES_DIALOGUES.length - 1)
+        setDialogue(PHASE_SIX_YES_DIALOGUES[PHASE_SIX_YES_DIALOGUES.length - 1])
+      }
+      setSpeaker('boy')
+      return
+    }
+
     if (stage === 'phase7') {
       if (phaseSevenIndex > 0) {
         const prev = phaseSevenIndex - 1
         setPhaseSevenIndex(prev)
         setDialogue(PHASE_SEVEN_DIALOGUES[prev])
+      } else {
+        startPhaseSixTwo()
       }
       return
     }
 
+    if (stage === 'phase6.2') {
+      setStage('phase6.1')
+      return
+    }
+
     if (stage === 'endingNote') {
-      setStage('phase7')
-      setPhaseSevenIndex(PHASE_SEVEN_DIALOGUES.length - 1)
-      setDialogue(PHASE_SEVEN_DIALOGUES[PHASE_SEVEN_DIALOGUES.length - 1])
+      setStage('phasePreMemory')
+      setPhasePreMemoryIndex(PHASE_PRE_MEMORY_DIALOGUES.length - 1)
+      setPhasePreMemoryChoiceOpen(true)
+      setDialogue(PHASE_PRE_MEMORY_DIALOGUES[PHASE_PRE_MEMORY_DIALOGUES.length - 1])
+      setSpeaker('boy')
+      return
+    }
+
+    if (stage === 'phasePreMemory') {
+      if (phasePreMemoryChoiceOpen) {
+        setPhasePreMemoryChoiceOpen(false)
+        return
+      }
+      if (phasePreMemoryIndex > 0) {
+        const prev = phasePreMemoryIndex - 1
+        setPhasePreMemoryDir(-1)
+        setPhasePreMemoryIndex(prev)
+        setDialogue(PHASE_PRE_MEMORY_DIALOGUES[prev])
+      } else {
+        setStage('phase7')
+        setPhaseSevenIndex(PHASE_SEVEN_DIALOGUES.length - 1)
+        setDialogue(PHASE_SEVEN_DIALOGUES[PHASE_SEVEN_DIALOGUES.length - 1])
+      }
       return
     }
 
@@ -856,6 +1097,47 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
       ? '/projectimages/flower.webp'
       : '/projectimages/manygift.webp'
 
+  const phasePreMemoryImage =
+    phasePreMemoryIndex <= 0
+      ? '/projectimages/hi3.webp'
+      : phasePreMemoryIndex === 1
+      ? '/projectimages/together.webp'
+      : phasePreMemoryIndex === 2
+      ? '/projectimages/together1.webp'
+      : '/projectimages/together2.webp'
+
+  const dialogueThemeClass =
+    stage === 'phase7'
+      ? 'border-violet-200/40 bg-[linear-gradient(130deg,rgba(44,18,72,0.88),rgba(81,34,121,0.82),rgba(122,54,154,0.78))] shadow-[0_18px_34px_rgba(36,10,56,0.55)] ring-1 ring-violet-300/25 backdrop-blur-xl'
+      : stage === 'phasePreMemory'
+      ? 'border-rose-200/50 bg-[linear-gradient(130deg,rgba(41,16,38,0.86),rgba(74,24,56,0.82),rgba(116,35,70,0.78))] shadow-[0_18px_34px_rgba(40,10,28,0.5)] ring-1 ring-rose-200/25 backdrop-blur-xl'
+      : stage === 'phase6.1'
+      ? 'border-pink-100/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.88),rgba(255,238,248,0.86),rgba(243,235,255,0.84))] shadow-[0_16px_32px_rgba(98,34,84,0.2)] ring-1 ring-pink-200/45 backdrop-blur-xl'
+      : stage === 'phase6'
+      ? 'border-sky-100/70 bg-[linear-gradient(120deg,rgba(255,255,255,0.88),rgba(234,246,255,0.84),rgba(255,238,248,0.82))] shadow-[0_16px_32px_rgba(17,62,96,0.22)] ring-1 ring-sky-200/50 backdrop-blur-xl'
+      : stage === 'phase5' && phaseFiveIndex >= 13
+      ? 'border-amber-100/70 bg-[linear-gradient(125deg,rgba(255,250,239,0.9),rgba(255,230,187,0.85),rgba(255,213,159,0.82))] shadow-[0_16px_32px_rgba(94,50,14,0.24)] ring-1 ring-amber-200/50 backdrop-blur-xl'
+      : speaker === 'her'
+      ? 'border-pink-200/80 bg-[linear-gradient(130deg,rgba(255,245,252,0.9),rgba(255,232,246,0.86),rgba(255,242,250,0.84))] shadow-[0_15px_28px_rgba(102,24,70,0.22)] ring-1 ring-pink-200/45 backdrop-blur-xl'
+      : 'border-sky-200/80 bg-[linear-gradient(130deg,rgba(244,251,255,0.9),rgba(231,246,255,0.86),rgba(243,251,255,0.84))] shadow-[0_15px_28px_rgba(19,58,90,0.22)] ring-1 ring-sky-200/45 backdrop-blur-xl'
+
+  const dialogueTextClass =
+    stage === 'phase7'
+      ? 'text-violet-50 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]'
+      : stage === 'phasePreMemory'
+      ? 'text-rose-50 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]'
+      : stage === 'phase6.1'
+      ? 'text-[#7d2d5a]'
+      : stage === 'phase6'
+      ? speaker === 'her'
+        ? 'text-pink-600'
+        : 'text-sky-700'
+      : stage === 'phase5' && phaseFiveIndex >= 13
+      ? 'text-amber-900'
+      : speaker === 'her'
+      ? 'text-pink-600'
+      : 'text-sky-700'
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -864,6 +1146,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
       transition={{ duration: 0.7, ease: 'easeOut' }}
       className="absolute inset-0 z-[82] overflow-hidden"
       onPointerDown={(event) => {
+        if (stage === 'phase6.1' || stage === 'phase6.2') return
         event.stopPropagation()
         const rect = event.currentTarget.getBoundingClientRect()
         const mid = rect.left + rect.width / 2
@@ -872,6 +1155,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
       }}
     >
       <audio ref={sunriseAudioRef} src="/projectimages/sunrisemusic.mp3" preload="auto" />
+      <audio ref={preMemoryAudioRef} src="/projectimages/munbevaa%20-%20Trim.mp3" preload="auto" />
 
       <button
         type="button"
@@ -883,20 +1167,34 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
             return
           }
           if (stage === 'phase6') {
+            startPhaseSixOne()
+            return
+          }
+          if (stage === 'phase6.1') {
+            startPhaseSixTwo()
+            return
+          }
+          if (stage === 'phase6.2') {
             startPhaseSeven()
             return
           }
           if (stage === 'phase7') {
+            startPhasePreMemory()
+            return
+          }
+          if (stage === 'phasePreMemory') {
             startEndingNote()
             return
           }
           if (stage === 'endingNote') {
-            if (showClimax && climaxReady && onNextPhase) onNextPhase()
+            if (showClimax) return
+            if (endingSubmitted || isSending) return
+            if (climaxReady && onNextPhase) onNextPhase()
             else if (!endingInput.trim()) showEndingAlert('Hey cutiee, ethavuthu solanum thonichena anupe...')
             else showEndingAlert('Message send panni apram next ponga...')
             return
           }
-          if (stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase7' && stage !== 'endingNote') {
+          if (stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase6.1' && stage !== 'phase6.2' && stage !== 'phase7' && stage !== 'phasePreMemory' && stage !== 'endingNote') {
             setStage('phase5')
             setPhaseFiveIndex(0)
             setPhaseFiveChoiceOpen(false)
@@ -925,8 +1223,14 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         className={`absolute inset-0 ${
           stage === 'phase6'
             ? 'bg-[linear-gradient(145deg,#edf6ff_0%,#d9ecff_36%,#d6e6ff_65%,#ffe9f4_100%)]'
+            : stage === 'phase6.1'
+            ? 'bg-[linear-gradient(145deg,#fff1f8_0%,#ffe0f2_34%,#f2e6ff_68%,#dceaff_100%)]'
+            : stage === 'phase6.2'
+            ? 'bg-[linear-gradient(165deg,#1f2b58_0%,#4e4a7f_24%,#e68664_54%,#f7c58f_74%,#a7d9a3_100%)]'
             : stage === 'phase7'
             ? 'bg-[linear-gradient(152deg,#1d1238_0%,#3b1c5f_36%,#5a2682_66%,#6d2f8d_100%)]'
+            : stage === 'phasePreMemory'
+            ? 'bg-[linear-gradient(155deg,#1f0f1b_0%,#3c1830_34%,#5b2441_68%,#7a2f4e_100%)]'
             : stage === 'endingNote'
             ? 'bg-[linear-gradient(155deg,#fff7fb_0%,#ffeef8_34%,#f8ecff_68%,#eef5ff_100%)]'
             : stage === 'phase5' && phaseFiveIndex >= 13
@@ -980,6 +1284,31 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
           />
         </>
       ) : null}
+
+      {stage === 'phase6.1' ? (
+        <SecretGardenPhase
+          onBack={() => {
+            setStage('phase6')
+            setPhaseSixQ1Open(false)
+            if (phaseSixOneFromMode === 'no') {
+              setPhaseSixMode('no_wait')
+              setPhaseSixQ2Open(true)
+              setPhaseSixNoUnlock(true)
+              setPhaseSixIndex(PHASE_SIX_NO_DIALOGUES.length - 1)
+              setDialogue('Ipo No button click pannu.')
+            } else {
+              setPhaseSixMode('yes')
+              setPhaseSixQ2Open(false)
+              setPhaseSixIndex(PHASE_SIX_YES_DIALOGUES.length - 1)
+              setDialogue(PHASE_SIX_YES_DIALOGUES[PHASE_SIX_YES_DIALOGUES.length - 1])
+            }
+            setSpeaker('boy')
+          }}
+          onComplete={startPhaseSixTwo}
+        />
+      ) : null}
+
+      {stage === 'phase6.2' ? <PhaseSixTwoSunrise onBack={() => setStage('phase6.1')} onComplete={startPhaseSeven} /> : null}
 
       {stage === 'phase7' ? (
         <>
@@ -1053,6 +1382,49 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
             </>
           ) : null}
           <img src={phaseSevenImage} alt="" className="absolute bottom-[10%] left-1/2 z-[56] w-[min(72vw,440px)] -translate-x-1/2 object-contain" />
+        </>
+      ) : null}
+
+      {stage === 'phasePreMemory' ? (
+        <>
+          <motion.div
+            aria-hidden
+            animate={{ opacity: [0.2, 0.42, 0.2], scale: [1, 1.08, 1] }}
+            transition={{ duration: 8.8, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -left-24 -top-20 h-[58vh] w-[58vh] rounded-full bg-[radial-gradient(circle,rgba(255,152,201,0.28)_0%,rgba(255,152,201,0)_74%)] blur-[62px]"
+          />
+          <motion.div
+            aria-hidden
+            animate={{ opacity: [0.22, 0.4, 0.22], scale: [1, 1.05, 1] }}
+            transition={{ duration: 9.6, delay: 0.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -bottom-24 -right-18 h-[58vh] w-[58vh] rounded-full bg-[radial-gradient(circle,rgba(210,144,255,0.24)_0%,rgba(210,144,255,0)_74%)] blur-[62px]"
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(80%_55%_at_50%_8%,rgba(255,225,236,0.2),rgba(255,225,236,0)_70%)]" />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.img
+              key={`pre-memory-${phasePreMemoryIndex}`}
+              src={phasePreMemoryImage}
+              alt=""
+              custom={phasePreMemoryDir}
+              initial={(dir) => ({
+                opacity: 0,
+                x: dir > 0 ? 86 : -86,
+                y: 10,
+                scale: 0.96,
+                filter: 'blur(6px)',
+              })}
+              animate={{ opacity: 1, x: 0, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={(dir) => ({
+                opacity: 0,
+                x: dir > 0 ? -72 : 72,
+                y: -8,
+                scale: 0.98,
+                filter: 'blur(6px)',
+              })}
+              transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute bottom-[10%] left-1/2 z-[56] w-[min(76vw,460px)] -translate-x-1/2 object-contain"
+            />
+          </AnimatePresence>
         </>
       ) : null}
 
@@ -1193,9 +1565,10 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
                     const success = await trackMemoryMessage(endingInput)
                     setEndingSubmitted(true)
                     setEndingInput('')
+                    setEndingModal('')
                     startEndingClimax()
                     if (!success) {
-                      showEndingAlert('Message send aagala... one more time try pannalama?')
+                      setEndingSubmitted(false)
                     }
                     setIsSending(false)
                   }
@@ -1251,7 +1624,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         </motion.div>
       ) : null}
       
-      {stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase7' && stage !== 'endingNote' ? (
+      {stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase6.1' && stage !== 'phase6.2' && stage !== 'phase7' && stage !== 'phasePreMemory' && stage !== 'endingNote' ? (
         <>
           <div className="absolute inset-x-[6%] bottom-[17%] top-[14%] rounded-[2.2rem] border border-white/65 bg-white/34 shadow-[0_22px_42px_rgba(13,65,93,0.18)] backdrop-blur-lg" />
           <div className="absolute inset-x-[9%] bottom-[20%] top-[17%] rounded-[1.9rem] border border-cyan-200/75 bg-[linear-gradient(180deg,rgba(198,247,255,0.8)_0%,rgba(175,238,255,0.7)_100%)]" />
@@ -1268,7 +1641,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         />
       ) : null}
 
-      {!showCenterIntro && stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase7' && stage !== 'endingNote' ? (
+      {!showCenterIntro && stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase6.1' && stage !== 'phase6.2' && stage !== 'phase7' && stage !== 'phasePreMemory' && stage !== 'endingNote' ? (
         <>
           <img
             src={`/projectimages/${leftPose}.webp`}
@@ -1285,7 +1658,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         </>
       ) : null}
 
-      {shuttle.visible && stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase7' && stage !== 'endingNote' ? (
+      {shuttle.visible && stage !== 'phase5' && stage !== 'phase6' && stage !== 'phase6.1' && stage !== 'phase6.2' && stage !== 'phase7' && stage !== 'phasePreMemory' && stage !== 'endingNote' ? (
         <div
           className="pointer-events-none absolute z-[96] -translate-x-1/2 -translate-y-1/2"
           style={{
@@ -1329,7 +1702,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
 
           <div
             className="absolute inset-0 z-[55] bg-black transition-opacity duration-[2000ms]"
-            style={{ opacity: stage === 'phase6' ? 0 : phaseFiveFade }}
+            style={{ opacity: stage === 'phase6' || stage === 'phase6.1' || stage === 'phase6.2' ? 0 : phaseFiveFade }}
           />
 
           {phaseFiveCenterImage && phaseFiveFade < 0.9 ? (
@@ -1527,7 +1900,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
                   question: 'Will you love me?',
                   choice: 'No (Final)',
                 })
-                startPhaseSeven()
+                startPhaseSixOne('no')
                 return
               }
               setPhaseSixNoHopIndex((current) => current + 1)
@@ -1568,17 +1941,77 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
         </div>
       ) : null}
 
-      {dialogue ? (
+      {stage === 'phasePreMemory' && phasePreMemoryChoiceOpen ? (
+        <div className="absolute bottom-[34%] left-1/2 z-[92] h-[178px] w-[min(94vw,760px)] -translate-x-1/2 px-3 sm:bottom-[36%] sm:h-[190px] sm:px-4">
+          {[
+            { label: 'Varuven', tone: 'sky', pos: 'left' },
+            { label: 'Yosikeren', tone: 'violet', pos: 'center' },
+            { label: 'Varamudeyathu', tone: 'rose', pos: 'right' },
+          ].map((option) => (
+            <motion.button
+              key={option.label}
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              initial={{
+                opacity: 0,
+                y: option.pos === 'center' ? 14 : 22,
+                x: option.pos === 'left' ? -28 : option.pos === 'right' ? 28 : 0,
+                scale: 0.9,
+              }}
+              animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+              transition={{
+                duration: 0.52,
+                delay: option.pos === 'center' ? 0 : option.pos === 'left' ? 0.08 : 0.16,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              onClick={() => {
+                setPhasePreMemoryChoiceOpen(false)
+                sendEvent({
+                  phase: 'phasePreMemory',
+                  question: 'En kai pudichitu kooda irupaya?',
+                  choice: option.label,
+                })
+                startEndingNote()
+              }}
+              className={`absolute rounded-2xl border px-3 py-3 text-[0.88rem] font-semibold shadow sm:text-base ${
+                option.pos === 'center'
+                  ? 'left-1/2 top-0 w-[48%] -translate-x-1/2 sm:w-[40%]'
+                  : option.pos === 'left'
+                  ? 'left-[2%] bottom-0 w-[45%] sm:left-[7%] sm:w-[34%]'
+                  : 'right-[2%] bottom-0 w-[45%] sm:right-[7%] sm:w-[34%]'
+              } ${
+                option.tone === 'sky'
+                  ? 'border-sky-200/85 bg-sky-50/92 text-sky-700'
+                  : option.tone === 'violet'
+                  ? 'border-violet-200/85 bg-violet-50/92 text-violet-700'
+                  : 'border-rose-200/85 bg-rose-50/92 text-rose-700'
+              }`}
+            >
+              {option.label}
+            </motion.button>
+          ))}
+        </div>
+      ) : null}
+
+      {dialogue && stage !== 'phase6.1' && stage !== 'phase6.2' ? (
         <div className="absolute bottom-[max(76px,calc(env(safe-area-inset-bottom)+58px))] left-1/2 z-[90] w-[min(94vw,760px)] -translate-x-1/2 px-2 sm:bottom-8">
           <div
-            className={`relative max-h-[36svh] overflow-y-auto rounded-[1.4rem] border px-4 py-3 shadow-[0_14px_26px_rgba(13,45,76,0.2)] backdrop-blur-xl sm:px-6 sm:py-5 ${
-              speaker === 'her' ? 'border-pink-200/80 bg-pink-50/86' : 'border-sky-200/80 bg-sky-50/88'
-            }`}
+            className={`relative max-h-[36svh] overflow-y-auto rounded-[1.4rem] border px-4 py-3 sm:px-6 sm:py-5 ${dialogueThemeClass}`}
           >
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-[inherit]"
+              animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                backgroundImage:
+                  'linear-gradient(120deg, rgba(255,255,255,0) 22%, rgba(255,255,255,0.3) 43%, rgba(255,255,255,0) 62%)',
+                backgroundSize: '220% 220%',
+                opacity: stage === 'phase7' ? 0.22 : 0.28,
+              }}
+            />
             <p
-              className={`whitespace-pre-line text-center text-[1.02rem] font-semibold leading-[1.3] sm:text-[1.62rem] ${
-                speaker === 'her' ? 'text-pink-600' : 'text-sky-700'
-              }`}
+              className={`whitespace-pre-line text-center text-[1.02rem] font-semibold leading-[1.3] sm:text-[1.62rem] ${dialogueTextClass}`}
               style={{ fontFamily: "'Cormorant Garamond', serif" }}
             >
               {dialogue}
@@ -1589,7 +2022,7 @@ const PhaseFour = ({ onNextPhase, onStageChange }) => {
 
       <div
         className="pointer-events-none absolute inset-0 z-[94] bg-black"
-        style={{ opacity: stage === 'phase6' || stage === 'phase7' || stage === 'endingNote' ? 0 : blackOpacity }}
+        style={{ opacity: stage === 'phase6' || stage === 'phase6.1' || stage === 'phase6.2' || stage === 'phase7' || stage === 'phasePreMemory' || stage === 'endingNote' ? 0 : blackOpacity }}
       />
     </motion.div>
   )

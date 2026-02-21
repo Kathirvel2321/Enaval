@@ -7,6 +7,8 @@ const PhaseOneEnding = ({ dialogue, dialogueIndex, onNextPhase }) => {
   const isUnconciousPop = dialogueIndex === 22
   const isEmotionalPop = dialogueIndex >= 23
   const musicRef = useRef(null)
+  const massRef = useRef(null)
+  const massPlayedRef = useRef(false)
   const showModernRomanticTheme = dialogueIndex >= 12
 
   const mainImage =
@@ -46,11 +48,11 @@ const PhaseOneEnding = ({ dialogue, dialogueIndex, onNextPhase }) => {
     ? 'w-[132px] sm:bottom-18 sm:w-[186px] lg:bottom-8 lg:w-[268px]'
     : 'w-[132px] sm:bottom-18 sm:w-[186px] lg:bottom-8 lg:w-[230px]'
   const dialogueCardClass = showModernRomanticTheme
-    ? 'relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-white/80 bg-white/78 px-4 py-3 shadow-[0_14px_26px_rgba(68,30,54,0.16)] backdrop-blur-xl sm:px-6 sm:py-5'
-    : 'relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-white/35 bg-black/54 px-4 py-3 shadow-[0_14px_26px_rgba(0,0,0,0.45)] backdrop-blur-md sm:px-6 sm:py-5'
+    ? 'relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-white/80 bg-[linear-gradient(130deg,rgba(255,255,255,0.9),rgba(255,240,247,0.84),rgba(255,245,250,0.82))] px-4 py-3 shadow-[0_16px_30px_rgba(68,30,54,0.2)] ring-1 ring-rose-200/45 backdrop-blur-xl sm:px-6 sm:py-5'
+    : 'relative max-h-[35svh] overflow-y-auto rounded-[1.4rem] border border-rose-100/35 bg-[linear-gradient(130deg,rgba(7,7,12,0.68),rgba(22,16,28,0.62),rgba(28,13,28,0.58))] px-4 py-3 shadow-[0_16px_30px_rgba(0,0,0,0.5)] ring-1 ring-rose-100/15 backdrop-blur-md sm:px-6 sm:py-5'
   const dialogueTextClass = showModernRomanticTheme
-    ? 'text-center text-[1.04rem] font-semibold leading-[1.3] text-[#6b2449] sm:text-[1.9rem]'
-    : 'text-center text-[1.04rem] font-semibold leading-[1.3] text-rose-50 sm:text-[1.9rem]'
+    ? 'text-center text-[1.04rem] font-semibold leading-[1.3] text-[#6b2449] drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)] sm:text-[1.9rem]'
+    : 'text-center text-[1.04rem] font-semibold leading-[1.3] text-rose-50 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)] sm:text-[1.9rem]'
 
   useEffect(() => {
     const audio = musicRef.current
@@ -71,6 +73,19 @@ const PhaseOneEnding = ({ dialogue, dialogueIndex, onNextPhase }) => {
       audio.currentTime = 0
     }
   }, [isSareePhase])
+
+  useEffect(() => {
+    const audio = massRef.current
+    if (!audio) return
+    const text = String(dialogue || '').toLowerCase()
+    const shouldPlay = text.includes('manja')
+    if (!shouldPlay || massPlayedRef.current) return
+    massPlayedRef.current = true
+    audio.loop = false
+    audio.volume = 0.62
+    audio.currentTime = 0
+    audio.play().catch(() => {})
+  }, [dialogue])
 
   return (
     <motion.div
@@ -149,6 +164,7 @@ const PhaseOneEnding = ({ dialogue, dialogueIndex, onNextPhase }) => {
       </AnimatePresence>
 
       <audio ref={musicRef} src="/projectimages/sareemusic.mp3" preload="auto" />
+      <audio ref={massRef} src="/projectimages/mass.mp3" preload="auto" />
 
       <AnimatePresence mode="wait">
         {popImage ? (
