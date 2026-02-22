@@ -18,6 +18,7 @@ const SUPABASE_LOVE_SESSIONS_TABLE = process.env.SUPABASE_LOVE_SESSIONS_TABLE ||
 const BREVO_API_KEY = process.env.BREVO_API_KEY || ''
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.MAIL_FROM || ''
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Love Story'
+const JOB_SECRET = process.env.JOB_SECRET || ''
 
 const allowedOrigins = FRONTEND_ORIGIN.split(',')
   .map((origin) => origin.trim())
@@ -89,6 +90,14 @@ const parseEvents = (value) => {
   }
 }
 
+const hasEvent = (events, matcher) => {
+  if (!Array.isArray(events)) return false
+  return events.some((event) => {
+    if (!event || typeof event !== 'object') return false
+    return matcher(event)
+  })
+}
+
 const requireSupabase = (res) => {
   if (supabaseReady && supabase) return true
   res.status(500).json({ ok: false, error: 'supabase_not_configured' })
@@ -106,7 +115,7 @@ const updateVisit = async (visitId, patch) => {
   if (error) throw error
 }
 
-const notifyOpen = async (visitId) => {
+const notifyOpen = async ({ visitId, openedAtLocal }) => {
   const to = process.env.ADMIN_EMAIL
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL || !to) return
 
@@ -121,13 +130,55 @@ const notifyOpen = async (visitId) => {
       sender: { email: BREVO_SENDER_EMAIL, name: BREVO_SENDER_NAME },
       to: [{ email: to }],
       subject: 'Love website opened',
-      textContent: `Your website has been opened.\nVisit: ${visitId}\nTap to see all stored data: ${adminUrl}`,
+      textContent: `Your website has been opened.\nOpened at (Local): ${openedAtLocal || 'unknown'}\nVisit: ${visitId}\nTap to see all stored data: ${adminUrl}`,
     }),
   })
 
   if (!response.ok) {
     const body = await response.text()
     throw new Error(`Brevo API failed: ${response.status} ${body}`)
+  }
+}
+
+const processOpenEmailForVisit = async (visitId, source = 'job') => {
+  const row = await getVisitById(visitId)
+  if (!row) return { ok: false, reason: 'visit_not_found' }
+  const events = parseEvents(row.events_json)
+
+  const alreadySent = hasEvent(
+    events,
+    (event) => event.type === 'system' && event.key === 'open_email_notification' && event.value === 'sent',
+  )
+  if (alreadySent) return { ok: true, sent: false, reason: 'already_sent' }
+
+  if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL || !process.env.ADMIN_EMAIL) {
+    return { ok: false, sent: false, reason: 'email_not_configured' }
+  }
+
+  try {
+    await notifyOpen({ visitId: row.visit_id, openedAtLocal: row.opened_at_local })
+    await appendEvent({
+      visitId: row.visit_id,
+      eventType: 'system',
+      phase: 'backend',
+      key: 'open_email_notification',
+      value: 'sent',
+      extra: { source },
+    })
+    emailState = { ...emailState, ok: true, error: '' }
+    return { ok: true, sent: true }
+  } catch (error) {
+    const message = String(error?.message || 'brevo_failed').slice(0, 220)
+    await appendEvent({
+      visitId: row.visit_id,
+      eventType: 'system',
+      phase: 'backend',
+      key: 'open_email_notification',
+      value: 'failed',
+      extra: { source, error: message },
+    })
+    emailState = { ...emailState, ok: false, error: message }
+    return { ok: false, sent: false, reason: message }
   }
 }
 
@@ -215,7 +266,7 @@ app.post('/api/view/open', async (req, res) => {
     const visitId = String(req.body?.visitId || '').trim()
     if (!visitId) return res.status(400).json({ ok: false, error: 'visitId is required' })
 
-    await ensureVisitExists(visitId, req, { notifyIfCreated: true })
+    const { created } = await ensureVisitExists(visitId, req, { notifyIfCreated: false })
     await appendEvent({
       visitId,
       eventType: 'open',
@@ -226,9 +277,75 @@ app.post('/api/view/open', async (req, res) => {
     })
     await updateVisit(visitId, { last_phase: String(req.body?.phase || 'entry') })
 
+    if (created) {
+      await appendEvent({
+        visitId,
+        eventType: 'system',
+        phase: 'backend',
+        key: 'open_email_notification',
+        value: 'pending',
+        extra: { source: 'open' },
+      })
+
+      // Best-effort immediate attempt; reliable retry is handled by /api/jobs/send-open-mails.
+      processOpenEmailForVisit(visitId, 'open_immediate').catch((error) => {
+        console.error('Immediate open email failed:', error?.message || error)
+      })
+    }
+
     return res.json({ ok: true, visitId })
   } catch (error) {
     console.error('/api/view/open error:', error)
+    return res.status(500).json({ ok: false, error: 'internal_error' })
+  }
+})
+
+app.post('/api/jobs/send-open-mails', async (req, res) => {
+  try {
+    if (!requireSupabase(res)) return
+    if (JOB_SECRET && req.headers['x-job-secret'] !== JOB_SECRET) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' })
+    }
+
+    const limitRaw = Number(req.body?.limit)
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 80
+
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLE)
+      .select('visit_id, opened_at_local, events_json')
+      .order('id', { ascending: false })
+      .limit(limit)
+    if (error) throw error
+
+    let sent = 0
+    let failed = 0
+    let skipped = 0
+
+    for (const row of data || []) {
+      const events = parseEvents(row.events_json)
+      const opened = hasEvent(events, (event) => event.type === 'open' || event.key === 'website_opened')
+      if (!opened) {
+        skipped += 1
+        continue
+      }
+      const result = await processOpenEmailForVisit(row.visit_id, 'cron_job')
+      if (result.sent) sent += 1
+      else if (result.ok) skipped += 1
+      else failed += 1
+    }
+
+    return res.json({
+      ok: true,
+      checked: (data || []).length,
+      sent,
+      failed,
+      skipped,
+      hint: JOB_SECRET
+        ? 'Call with header x-job-secret from your cron.'
+        : 'Set JOB_SECRET for secure cron calls.',
+    })
+  } catch (error) {
+    console.error('/api/jobs/send-open-mails error:', error)
     return res.status(500).json({ ok: false, error: 'internal_error' })
   }
 })
